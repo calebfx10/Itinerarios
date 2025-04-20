@@ -251,7 +251,8 @@ def calculate_pso_breakdown(itinerary, start_time, max_hours, preferred_categori
     }
 
 def optimize_with_pso(days, max_hours, lat, lon, categories, start_time):
-    engine = create_engine('postgresql://postgres:itinerarios12345@db.dfbrazdcvlwnwlmlaxpm.supabase.co:5432/postgres')
+    engine = create_engine('postgresql://postgres:itinerarios12345@db.dfbrazdcvlwnwlmlaxpm.supabase.co:5432/postgres?sslmode=require')
+
 
     categoria_sql_like = [f"%{c}%" for c in categories]
 
