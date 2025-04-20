@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
 import numpy as np
-from GA import optimize_with_ga
 from PSO import AdaptivePSO, repair_particle, fitness_function, calculate_pso_breakdown, optimize_with_pso
 
 app = FastAPI()
