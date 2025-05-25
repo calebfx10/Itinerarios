@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import timedelta, datetime
 from sqlalchemy import create_engine
 from pyswarms.single.global_best import GlobalBestPSO
-
+import random
 from pyswarms.single.global_best import GlobalBestPSO
 import numpy as np
 
@@ -337,6 +337,9 @@ def generate_three_itineraries(days, max_hours, lat, lon, categories, start_time
 
         for day in breakdown["daily_breakdown"]:
             if day["schedule"]:
-                used_pois.add(day["schedule"][0]["id"])  # Puedes usar random.choice(...) si quieres más variedad
+                if day["schedule"]:
+                    poi_ids = [poi["id"] for poi in day["schedule"]]
+                    selected_id = random.choice(poi_ids)
+                    used_pois.add(selected_id)
 
     return all_itineraries
