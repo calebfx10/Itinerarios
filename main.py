@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
 import numpy as np
-from PSO import AdaptivePSO, repair_particle, fitness_function, calculate_pso_breakdown, optimize_with_pso
+from PSO import AdaptivePSO, repair_particle, fitness_function, calculate_pso_breakdown, optimize_with_pso, generate_three_itineraries
 
 app = FastAPI()
 
@@ -14,7 +14,6 @@ class ItineraryRequest(BaseModel):
     endTime: str
     location: dict
     categories: List[str]
-
 
 @app.post("/generate-itinerary/")
 def generate_itinerary(request: ItineraryRequest):
@@ -33,43 +32,44 @@ def generate_itinerary(request: ItineraryRequest):
     lon = request.location["longitude"]
     categories = request.categories
 
-    # 4. Ejecutar PSO
-    best_cost, best_position = optimize_with_pso(days, max_hours, lat, lon, categories, start_time)
-    best_position = repair_particle(best_position, days, max_hours, start_time).reshape(days, -1)
-    result = calculate_pso_breakdown(best_position, start_time, max_hours, categories)
+    # 4. Ejecutar PSO 3 veces para obtener 3 itinerarios distintos
+    itinerarios = generate_three_itineraries(days, max_hours, lat, lon, categories, start_time)
 
-    # 5. Reestructurar la salida
-    days_list = []
-    current_date = start_date
+    response = []
+    for idx, result in enumerate(itinerarios, start=1):
+        days_list = []
+        current_date = start_date
 
-    for day in result["daily_breakdown"]:
-        itinerary_pois = []
-        for poi in day["schedule"]:
-            itinerary_pois.append({
-                "id": str(poi["id"]),
-                "name": poi["name"],
-                "latitude": str(poi["latitude"]),
-                "longitude": str(poi["longitude"]),
-                "address": poi["address"],
-                "arrival_time": current_date.strftime("%d/%m/%Y") + f" {poi['arrival_time']} AM",
-                "departure_time": current_date.strftime("%d/%m/%Y") + f" {poi['departure_time']} AM",
-                "category": poi["category"],
-                "rating": poi["rating"],
-                "photos": poi["photos"],
-                "description": poi["description"]
+        for day in result["daily_breakdown"]:
+            itinerary_pois = []
+            for poi in day["schedule"]:
+                itinerary_pois.append({
+                    "id": str(poi["id"]),
+                    "name": poi["name"],
+                    "latitude": str(poi["latitude"]),
+                    "longitude": str(poi["longitude"]),
+                    "address": poi["address"],
+                    "arrival_time": current_date.strftime("%d/%m/%Y") + " " + datetime.datetime.strptime(poi['arrival_time'], "%H:%M").strftime("%I:%M %p"),
+                    "departure_time": current_date.strftime("%d/%m/%Y") + " " + datetime.datetime.strptime(poi['departure_time'], "%H:%M").strftime("%I:%M %p"),
+                    "category": poi["category"],
+                    "rating": poi["rating"],
+                    "photos": poi["photos"],
+                    "description": poi["description"]
+                })
+            days_list.append({
+                "number": day["day"],
+                "itinerary_pois": itinerary_pois
             })
-        days_list.append({
-            "number": day["day"],
-            "itinerary_pois": itinerary_pois
-        })
-        current_date += datetime.timedelta(days=1)
+            current_date += datetime.timedelta(days=1)
 
-    return {
-        "success": True,
-        "itineraries": [{
-            "name": "Itinerario 1",
+        response.append({
+            "name": f"Itinerario {idx}",
             "startDate": request.startDate,
             "endDate": request.endDate,
             "days": days_list
-        }]
+        })
+
+    return {
+        "success": True,
+        "itineraries": response
     }

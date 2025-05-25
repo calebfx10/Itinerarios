@@ -250,20 +250,32 @@ def calculate_pso_breakdown(itinerary, start_time, max_hours, preferred_categori
         'total_penalization': penalty
     }
 
-def optimize_with_pso(days, max_hours, lat, lon, categories, start_time):
+def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude_pois=None):
     engine = create_engine('postgresql://postgres:itinerarios12345@db.dfbrazdcvlwnwlmlaxpm.supabase.co:5432/postgres')
 
     categoria_sql_like = [f"%{c}%" for c in categories]
 
-    pois_df = pd.read_sql("""
+    # Construcción dinámica del SQL con exclusión de POIs
+    sql = """
         SELECT id, name, rating, category, latitude, longitude, address, description
         FROM pois 
         WHERE ST_DWithin(geom, ST_MakePoint(%s, %s)::geography, 6000)
-          AND category ILIKE ANY (%s)
-    """, engine, params=(lon, lat, categoria_sql_like))
+        AND category ILIKE ANY (%s)
+    """
+    params = (lon, lat, categoria_sql_like)
+    if exclude_pois:
+        sql += " AND id != ALL(%s)"
+        params += ([*exclude_pois],)  # ✅ esto lo arregla
+
+    pois_df = pd.read_sql(sql, engine, params=params)
+
+    if pois_df.empty:
+        engine.dispose()
+        raise ValueError("No se encontraron POIs válidos para los parámetros dados.")
 
     valid_ids = pois_df['id'].tolist()
 
+    # Asegúrate de pasar una lista como parámetro en la siguiente consulta
     transit_time_df = pd.read_sql("""
         WITH near_pois AS (
             SELECT unnest(%s::int[]) AS id
@@ -272,7 +284,8 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time):
         FROM poi_distances
         WHERE poi_start IN (SELECT id FROM near_pois)
           AND poi_end IN (SELECT id FROM near_pois)
-    """, engine, params=(valid_ids,))
+    """, engine, params=(list(valid_ids),))  # 👈 muy importante que sea una lista dentro de una tupla
+
     engine.dispose()
 
     global POIs, transit_time
@@ -289,7 +302,6 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time):
         }
         for _, row in pois_df.iterrows()
     }
-
 
     transit_time = {
         (row['poi_start'], row['poi_end']): row['transit_time']
@@ -309,3 +321,22 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time):
     fitness_fn = lambda X: fitness_function(X, days, max_hours, categories, start_time)
     best_cost, best_pos = optimizer.optimize(fitness_fn, iters=100)
     return best_cost, best_pos
+
+
+def generate_three_itineraries(days, max_hours, lat, lon, categories, start_time):
+    all_itineraries = []
+    used_pois = set()
+
+    for i in range(3):
+        print(f"Generating itinerary {i + 1}...")
+        exclude = list(used_pois) if used_pois else None
+        best_cost, best_position = optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude_pois=exclude)
+        best_position = repair_particle(best_position, days, max_hours, start_time).reshape(days, -1)
+        breakdown = calculate_pso_breakdown(best_position, start_time, max_hours, categories)
+        all_itineraries.append(breakdown)
+
+        for day in breakdown["daily_breakdown"]:
+            if day["schedule"]:
+                used_pois.add(day["schedule"][0]["id"])  # Puedes usar random.choice(...) si quieres más variedad
+
+    return all_itineraries
