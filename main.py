@@ -44,7 +44,7 @@ def generate_itinerary(request: ItineraryRequest):
             itinerary_pois = []
             for poi in day["schedule"]:
                 itinerary_pois.append({
-                    "id": str(poi["id"]),
+                    "id": poi["id"],
                     "name": poi["name"],
                     "latitude": str(poi["latitude"]),
                     "longitude": str(poi["longitude"]),
