@@ -274,7 +274,7 @@ def optimize_with_ga(days, max_hours, lat, lon, categories, start_time, exclude_
     categoria_sql_like = [f"%{c}%" for c in categories]
 
     sql = """
-        SELECT id, name, rating, category, latitude, longitude
+        SELECT id, name, rating, category, latitude, longitude, address, description
         FROM pois 
         WHERE ST_DWithin(geom, ST_MakePoint(%s, %s)::geography, 8000)
           AND category ILIKE ANY (%s)
