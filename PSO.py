@@ -259,7 +259,7 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude
     sql = """
         SELECT id, name, rating, category, latitude, longitude, address, description
         FROM pois 
-        WHERE ST_DWithin(geom, ST_MakePoint(%s, %s)::geography, 6000)
+        WHERE ST_DWithin(geom, ST_MakePoint(%s, %s)::geography, 8000)
         AND category ILIKE ANY (%s)
     """
     params = (lon, lat, categoria_sql_like)
