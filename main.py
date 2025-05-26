@@ -4,12 +4,10 @@ from pydantic import BaseModel
 from typing import List
 import numpy as np
 from PSO import (
-    AdaptivePSO,
-    repair_particle,
-    fitness_function,
-    calculate_pso_breakdown,
-    optimize_with_pso,
-    generate_three_itineraries
+    generate_three_itineraries  # PSO
+)
+from GA import (
+    generate_three_itineraries_with_ga  # AG
 )
 
 app = FastAPI()
@@ -22,8 +20,18 @@ class ItineraryRequest(BaseModel):
     location: dict
     categories: List[str]
 
+# Endpoint para PSO
 @app.post("/generate-itinerary/")
 def generate_itinerary(request: ItineraryRequest):
+    return generate_itinerary_core(request, use_ga=False)
+
+# Endpoint para AG
+@app.post("/generate-itinerary-ga/")
+def generate_itinerary_ga(request: ItineraryRequest):
+    return generate_itinerary_core(request, use_ga=True)
+
+# Función reutilizada para ambos algoritmos
+def generate_itinerary_core(request: ItineraryRequest, use_ga: bool = False):
     try:
         # 1. Calcular días
         start_date = datetime.datetime.strptime(request.startDate, "%Y-%m-%d")
@@ -40,8 +48,11 @@ def generate_itinerary(request: ItineraryRequest):
         lon = request.location["longitude"]
         categories = request.categories
 
-        # 4. Ejecutar PSO 3 veces para obtener 3 itinerarios distintos
-        itinerarios = generate_three_itineraries(days, max_hours, lat, lon, categories, start_time)
+        # 4. Ejecutar algoritmo correspondiente
+        if use_ga:
+            itinerarios = generate_three_itineraries_with_ga(days, max_hours, lat, lon, categories, start_time)
+        else:
+            itinerarios = generate_three_itineraries(days, max_hours, lat, lon, categories, start_time)
 
         response = []
         for idx, result in enumerate(itinerarios, start=1):
