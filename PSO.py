@@ -311,7 +311,7 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude
     dimensions = len(POIs) * days * 2
 
     optimizer = AdaptivePSO(
-        n_particles=50,
+        n_particles=100,
         dimensions=dimensions,
         w_bounds=(0.9, 0.4),
         c1_bounds=(2.5, 1.5),
@@ -319,7 +319,7 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude
     )
 
     fitness_fn = lambda X: fitness_function(X, days, max_hours, categories, start_time)
-    best_cost, best_pos = optimizer.optimize(fitness_fn, iters=100)
+    best_cost, best_pos = optimizer.optimize(fitness_fn, iters=80)
     return best_cost, best_pos
 
 
