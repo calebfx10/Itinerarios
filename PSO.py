@@ -199,8 +199,8 @@ def calculate_pso_breakdown(itinerary, start_time, max_hours, preferred_categori
                 'departure_time': current_time.strftime("%H:%M"),
                 'category': POIs[poi]['category'],
                 'rating': float(POIs[poi]['rating']),
-                'photos': ["https://example.com/photo.jpg"],  # Hardcode
-                'description': POIs[poi].get('description', 'Sin descripción disponible')
+                'photos': POIs[poi].get('photos', []),
+                'description': POIs[poi].get('description', 'Sin descripción disponible'),
             })
 
 
@@ -275,6 +275,18 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude
 
     valid_ids = pois_df['id'].tolist()
 
+    photos_df = pd.read_sql("""
+        SELECT photo_url, poi_id
+        FROM poi_photo
+        WHERE poi_id = ANY(%s)
+    """, engine, params=(valid_ids,))
+
+    poi_photos = {}
+    for poi_id, group in photos_df.groupby('poi_id'):
+        poi_photos[poi_id] = group['photo_url'].tolist()
+
+
+
     # Asegúrate de pasar una lista como parámetro en la siguiente consulta
     transit_time_df = pd.read_sql("""
         WITH near_pois AS (
@@ -298,7 +310,8 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude
             'latitude': row['latitude'],
             'longitude': row['longitude'],
             'address': row.get('address', 'Dirección no disponible'),
-            'description': row.get('description', 'Sin descripción disponible')
+            'description': row.get('description', 'Sin descripción disponible'),
+            'photos': poi_photos.get(row['id'], [])
         }
         for _, row in pois_df.iterrows()
     }

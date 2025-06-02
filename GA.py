@@ -202,7 +202,7 @@ def calculate_fitness_breakdown(individual, weights, start_time, preferred_categ
                 'departure_time': current_time.strftime("%H:%M"),
                 'category': POIs[poi]['category'],
                 'rating': float(POIs[poi]['rating']),
-                'photos': ["https://example.com/photo.jpg"],  # Hardcode
+                'photos': POIs[poi].get('photos', []),
                 'description': POIs[poi].get('description', 'Sin descripción disponible')
             })
             day_rating += POIs[poi]['rating']
@@ -290,6 +290,16 @@ def optimize_with_ga(days, max_hours, lat, lon, categories, start_time, exclude_
 
     valid_ids = pois_df['id'].tolist()
 
+    photos_df = pd.read_sql("""
+        SELECT photo_url, poi_id
+        FROM poi_photo
+        WHERE poi_id = ANY(%s)
+    """, engine, params=(valid_ids,))
+
+    poi_photos = {}
+    for poi_id, group in photos_df.groupby('poi_id'):
+        poi_photos[poi_id] = group['photo_url'].tolist()
+
     transit_df = pd.read_sql("""
         WITH near_pois AS (
             SELECT unnest(%s::int[]) AS id
@@ -312,7 +322,9 @@ def optimize_with_ga(days, max_hours, lat, lon, categories, start_time, exclude_
             'latitude': row['latitude'],
             'longitude': row['longitude'],
             'address': row.get('address', 'Dirección no disponible'),
-            'description': row.get('description', 'Sin descripción disponible')
+            'description': row.get('description', 'Sin descripción disponible'),
+            'photos': poi_photos.get(row['id'], [])
+
         }
         for _, row in pois_df.iterrows()
     }
