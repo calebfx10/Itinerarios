@@ -144,9 +144,9 @@ def fitness_function(X, days, max_hours, categories, start_time):
             total_rating += day_rating
 
         fitness_value = (
-            total_transit_time * 70 -
-            total_rating * 30 -
-            preferred_matches * 10 +
+            total_transit_time * 90 -
+            total_rating * 10 -
+            preferred_matches * 0 +
             penalty
         )
 
@@ -332,7 +332,7 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude
     )
 
     fitness_fn = lambda X: fitness_function(X, days, max_hours, categories, start_time)
-    best_cost, best_pos = optimizer.optimize(fitness_fn, iters=80)
+    best_cost, best_pos = optimizer.optimize(fitness_fn, iters=40)
     return best_cost, best_pos
 
 
