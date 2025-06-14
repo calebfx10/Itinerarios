@@ -288,6 +288,9 @@ def optimize_with_ga(days, max_hours, lat, lon, categories, start_time, exclude_
 
     pois_df = pd.read_sql(sql, engine, params=params)
 
+    num_pois = pois_df.shape[0]
+    print(f"Total POIs encontrados: {num_pois}")
+
     valid_ids = pois_df['id'].tolist()
 
     photos_df = pd.read_sql("""

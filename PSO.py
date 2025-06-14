@@ -223,7 +223,7 @@ def calculate_pso_breakdown(itinerary, start_time, max_hours, preferred_categori
             day_penalty += (total_day_time - max_hours) * 1.5
         elif total_day_time < max_hours:
             # Penalización por no completar el tiempo mínimo
-            day_penalty += (max_hours - total_day_time) * 0.5  # Ajusta el factor según sea necesario
+            day_penalty += (max_hours - total_day_time) * 1.5
 
         # Actualizar métricas totales
         total_transit_time += day_transit
@@ -268,6 +268,9 @@ def optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude
         params += ([*exclude_pois],)  # ✅ esto lo arregla
 
     pois_df = pd.read_sql(sql, engine, params=params)
+
+    num_pois = pois_df.shape[0]
+    print(f"Total POIs encontrados: {num_pois}")
 
     if pois_df.empty:
         engine.dispose()
@@ -341,7 +344,7 @@ def generate_three_itineraries(days, max_hours, lat, lon, categories, start_time
     used_pois = set()
 
     for i in range(3):
-        print(f"Generating itinerary {i + 1}...")
+        print(f"[PSO] Generando itinerario {i + 1}...")
         exclude = list(used_pois) if used_pois else None
         best_cost, best_position = optimize_with_pso(days, max_hours, lat, lon, categories, start_time, exclude_pois=exclude)
         best_position = repair_particle(best_position, days, max_hours, start_time).reshape(days, -1)
